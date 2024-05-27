@@ -1,0 +1,37 @@
+import numpy as np
+from qiskit import QuantumCircuit
+from qiskit.circuit.library import StatePreparation
+from qiskit_aer import Aer
+from qiskit import transpile
+from qiskit.visualization import plot_histogram
+import matplotlib.pyplot as plt
+
+arr = [5, 3, 0, 1, 6, 2, 4, 5]
+
+len_index = int(np.ceil(np.log2(len(arr))))   # calculates minimum number of qubits needed to represent the index of all elements in the input array 
+
+len_qbit = int(np.log2(max(arr))) + 1       # calculates minimum number of qubits needed to represent the largest element in the array 
+
+num_of_qubits = len_index + len_qbit
+statevector = np.zeros(2**num_of_qubits)
+
+for i, el in enumerate(arr):
+    index_reg = '{0:b}'.format(i).zfill(len_index)
+    element_reg = '{0:b}'.format(el).zfill(len_qbit)
+    statevector[int(element_reg + index_reg, 2)] = 1
+
+statevector /= np.linalg.norm(statevector)   # normalization
+
+qc = QuantumCircuit(num_of_qubits)
+sp = StatePreparation(statevector)
+qc.append(sp, range(num_of_qubits))
+
+qc.measure_all()
+
+backend = Aer.get_backend('qasm_simulator')
+transpiled_circ = transpile (qc, backend=backend) 
+job= backend.run(transpiled_circ)
+counts = job.result().get_counts()
+plot_histogram(counts)
+#X axis represents measured value of all qbits
+# Y axis represents the number of time each combination of measured value occured.
