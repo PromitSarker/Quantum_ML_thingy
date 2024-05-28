@@ -1,0 +1,23 @@
+import numpy as np
+from qiskit import QuantumCircuit
+from qiskit.circuit.library import StatePreparation
+from qiskit_aer import Aer
+from qiskit import transpile
+from qiskit.visualization import plot_histogram
+import matplotlib.pyplot as plt
+#from qiskit.providers.aer import QasmSimulator
+
+# Create a quantum circuit with 2 qbits
+qc = QuantumCircuit(2)
+
+# Encode classical data using rotation gates
+angle1 = 0.3  # Example angle for encoding qbit 0
+angle2 = 0.6  # Example angle for encoding qbit 1
+qc.rx(angle1, 0)
+qc.ry(angle2, 1)
+
+# Simulate quantum circuit
+simulator = Aer.get_backend('statevector_simulator')
+result = simulator.run(qc).result()
+statevector = result.get_statevector()
+print(statevector)
