@@ -1,0 +1,79 @@
+import numpy as np
+from qiskit import QuantumCircuit
+from qiskit.circuit.library import StatePreparation
+from qiskit_aer import Aer
+from qiskit import transpile
+from qiskit.visualization import plot_histogram
+import matplotlib.pyplot as plt
+from qiskit.circuit import Parameter
+from random import randint
+from math import sqrt
+backend = Aer.get_backend('aer_simulator')
+
+#As we need data to use amplitude, we will be generating data with test train set.v 
+train = {0:[],
+         1:[]
+        }
+test = []
+for i in range(0,8):
+    train[0].append(randint(0,15))
+    train[1].append(randint(30,60))
+    test.append(randint(20,50))
+
+#converting all values to amplitude
+sum0 = sum(train[0])
+sum1 = sum(train[1])
+sumtest = sum(test)
+for i in range(0,8):
+    train[0][i] = sqrt(train[0][i]/sum0)
+    train[1][i] = sqrt(train[1][i]/sum1)
+    test[i] = sqrt(test[i]/sumtest)
+
+# To compare 3-qubit states, we need 3 qubits for train data, 3 qubits for test data, and 1 ancilla qubit to compate the two states.
+qc = QuantumCircuit(7,1)
+
+def classification():
+    ini = train[0] # Retrieve amplitudes for classification 0.
+    qc.initialize(ini, [0,1,2]) # Map amplitudes to the first 3 qubits.
+    ini = test # Retrieve the amplitudes for the test data.
+    qc.initialize(ini, [3,4,5]) # Map amplitudes to the next 3 qubits.
+
+    # SWAP Test, aka distance measures, aka kernel methods, aka inner products
+    qc.h(6) # Apply a Hadamard to the ancilla qubit.
+    for i in range(0,3):
+        qc.cswap(6,i,i+3) # Using the ancilla as the control, SWAP like qubits of the train and test data.
+    qc.h(6) # Apply another Hadamard to the ancilla qubit.
+    qc.measure([6],[0]) # Measure only the ancilla qubit.
+    
+    job = transpile(qc, backend)
+    result = job.result()
+    print(result.get_counts(qc))
+    
+    ini = train[1] # Retrieve amplitudes for classification 1.
+    qc.initialize(ini, [0,1,2]) # Map amplitudes to the first 3 qubits.
+    ini = test # Retrieve the amplitudes for the test data.
+    qc.initialize(ini, [3,4,5]) # Map amplitudes to the next 3 qubits.
+    qc.reset(6) # Reset the ancilla qubit for re-use. Initialize(), above, includes resets for the first 6 qubits.
+
+    # SWAP Test, aka distance measures, aka kernel methods, aka inner products
+    qc.h(6) # Apply a Hadamard to the ancilla qubit.
+    for i in range(0,3):
+        qc.cswap(6,i,i+3) # Using the ancilla as the control, SWAP like qubits of the train and test data.
+    qc.h(6) # Apply another Hadamard to the ancilla qubit.
+    qc.measure([6],[0]) # Measure only the ancilla qubit.
+    
+    job = transpile (qc, backend)
+    result = job.result()
+    print(result.get_counts(qc))
+
+    for i in range(10):
+        print(i)
+    
+    # Generate new test data each time.
+    for i in range(0,8):
+        test[i] = randint(30,60)
+    sumtest = sum(test)
+    for i in range(0,8):
+        test[i] = sqrt(test[i]/sumtest)  
+    classification()
+
